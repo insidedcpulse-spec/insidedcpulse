@@ -289,10 +289,10 @@ async function generateAISummary(text) {
         console.log("Gemini API response status:", response.status);
         const data = await response.json();
         console.log("Gemini API response data:", data);
-        if (response.ok && data.candidates && data.candidates.length > 0) {
+        if (response.ok && data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
             return data.candidates[0].content.parts[0].text;
         } else {
-            console.error("Gemini API error:", data);
+            console.error("Gemini API error: Invalid response or no candidates", data);
             return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
         }
     } catch (error) {
