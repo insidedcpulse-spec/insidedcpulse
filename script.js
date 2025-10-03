@@ -271,32 +271,30 @@ async function saveLeadToSupabase(email) {
     }
 }
 
-// Generate AI Summary with Gemini
+// Generate AI Summary with Gemini via Backend Proxy
 async function generateAISummary(text) {
     try {
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${CONFIG.gemini.apiKey}`;
-        console.log("Attempting to call Gemini API with key:", CONFIG.gemini.apiKey);
-        console.log("Gemini API URL:", geminiApiUrl);
-        let response = await fetch(geminiApiUrl, {
+        console.log("Calling backend proxy for Gemini API...");
+        const response = await fetch('/.netlify/functions/gemini-proxy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Summarize the following document excerpt in 3 practical key points, in simple language:\n\n${text}` }] }]
-            })
+            body: JSON.stringify({ text })
         });
-        console.log("Gemini API response status:", response.status);
+        
+        console.log("Backend proxy response status:", response.status);
         const data = await response.json();
-        console.log("Gemini API response data:", data);
-        if (response.ok && data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-            return data.candidates[0].content.parts[0].text;
+        console.log("Backend proxy response data:", data);
+        
+        if (response.ok && data.summary) {
+            return data.summary;
         } else {
-            console.error("Gemini API error: Invalid response or no candidates", data);
+            console.error("Backend proxy error:", data);
             return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
         }
     } catch (error) {
-        console.error('Gemini API error:', error);
+        console.error('Backend proxy error:', error);
         return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
     }
 }// Display Summary
