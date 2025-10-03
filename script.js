@@ -274,8 +274,10 @@ async function saveLeadToSupabase(email) {
 // Generate AI Summary with Gemini
 async function generateAISummary(text) {
     try {
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${CONFIG.gemini.apiKey}`;
         console.log("Attempting to call Gemini API with key:", CONFIG.gemini.apiKey);
-        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${CONFIG.gemini.apiKey}`, {
+        console.log("Gemini API URL:", geminiApiUrl);
+        let response = await fetch(geminiApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
