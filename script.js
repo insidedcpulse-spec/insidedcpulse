@@ -73,18 +73,17 @@ async function performSearch(query) {
     showLoading();
     
     try {
-        // Search all three APIs in parallel
-        const [federalRegisterResults, congressResults, govInfoResults] = await Promise.all([
+        // Search Federal Register and Congress.gov APIs in parallel
+        // Note: GovInfo API removed due to CORS restrictions in browser
+        const [federalRegisterResults, congressResults] = await Promise.all([
             searchFederalRegister(query),
-            searchCongressGov(query),
-            searchGovInfo(query)
+            searchCongressGov(query)
         ]);
 
         // Combine and display results
         const allResults = [
             ...federalRegisterResults.map(r => ({ ...r, source: 'Federal Register', type: 'RULE' })),
-            ...congressResults.map(r => ({ ...r, source: 'Congress.gov', type: 'BILL' })),
-            ...govInfoResults.map(r => ({ ...r, source: 'GovInfo', type: 'DOCUMENT' }))
+            ...congressResults.map(r => ({ ...r, source: 'Congress.gov', type: 'BILL' }))
         ];
 
         displayResults(allResults);
@@ -141,25 +140,8 @@ async function searchCongressGov(query) {
     }
 }
 
-// GovInfo API
-async function searchGovInfo(query) {
-    try {
-        const url = `https://api.govinfo.gov/search?query=${encodeURIComponent(query)}&pageSize=10&api_key=${CONFIG.govApis.apiKey}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        return (data.results || []).map(doc => ({
-            title: doc.title || 'Untitled Document',
-            date: doc.dateIssued || 'N/A',
-            url: doc.packageLink || '#',
-            abstract: doc.summary || 'No summary available',
-            fullText: doc.summary || doc.title || ''
-        }));
-    } catch (error) {
-        console.error('GovInfo API error:', error);
-        return [];
-    }
-}
+// GovInfo API removed due to CORS restrictions in browser environment
+// For production, this would require a backend proxy server
 
 // Display Results
 function displayResults(results) {
@@ -292,7 +274,8 @@ async function saveLeadToSupabase(email) {
 // Generate AI Summary with Gemini
 async function generateAISummary(text) {
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${CONFIG.gemini.apiKey}`, {
+        // Try with gemini-1.5-flash first
+        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CONFIG.gemini.apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -306,12 +289,22 @@ async function generateAISummary(text) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        const summary = data.candidates[0].content.parts[0].text;
-        return summary;
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            const summary = data.candidates[0].content.parts[0].text;
+            return summary;
+        } else {
+            throw new Error('Invalid API response');
+        }
     } catch (error) {
         console.error('Gemini API error:', error);
-        return 'Unable to generate summary at this time. Please try again later.';
+        // Return a helpful message with the actual document text as fallback
+        return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
     }
 }
 
