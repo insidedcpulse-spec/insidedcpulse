@@ -274,67 +274,30 @@ async function saveLeadToSupabase(email) {
 // Generate AI Summary with Gemini
 async function generateAISummary(text) {
     try {
-        // Try with gemini-1.5-flash first
-            console.log("Attempting to call Gemini API...");
-            console.log("Attempting to call Gemini API with key:", CONFIG.gemini.apiKey);
-            console.log("Payload:", JSON.stringify({
-                contents: [{ parts: [{ text: `Summarize the following document excerpt in 3 practical key points, in simple language:
-
-${text}` }] }]
-            }));
-            let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${CONFIG.gemini.apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Summarize the following document excerpt in 3 practical key points, in simple language:
-
-${text}` }] }]
-                })
-            });
-            console.log("Gemini API response status:", response.status);
-            const data = await response.json();
-            console.log("Gemini API response data:", data);
-            if (response.ok && data.candidates && data.candidates.length > 0) {
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                console.error("Gemini API error:", data);
-                return null;
-            }
+        console.log("Attempting to call Gemini API with key:", CONFIG.gemini.apiKey);
+        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${CONFIG.gemini.apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `Summarize the following regulatory document in exactly 3 key practical points in simple business language. Each point should be one clear sentence:\n\n${text}`
-                    }]
-                }]
+                contents: [{ parts: [{ text: `Summarize the following document excerpt in 3 practical key points, in simple language:\n\n${text}` }] }]
             })
         });
-        
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-        
+        console.log("Gemini API response status:", response.status);
         const data = await response.json();
-        
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            const summary = data.candidates[0].content.parts[0].text;
-            return summary;
+        console.log("Gemini API response data:", data);
+        if (response.ok && data.candidates && data.candidates.length > 0) {
+            return data.candidates[0].content.parts[0].text;
         } else {
-            throw new Error('Invalid API response');
+            console.error("Gemini API error:", data);
+            return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
         }
     } catch (error) {
         console.error('Gemini API error:', error);
-        // Return a helpful message with the actual document text as fallback
         return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
     }
-}
-
-// Display Summary
+}// Display Summary
 function displaySummary(summary) {
     // Find all cards and show summary in the most recent one
     const cards = document.querySelectorAll('.result-card');
