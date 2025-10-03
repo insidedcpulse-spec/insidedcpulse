@@ -5,7 +5,7 @@ const CONFIG = {
         anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXh1cXZwZ3FudXF2ZHZqZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0ODY5NzQsImV4cCI6MjA3NTA2Mjk3NH0.tHbvGQXLqRqvX8_GxUlVvZlqQGT7R7lLXPVUQR2qN9A'
     },
     gemini: {
-        apiKey: 'AIzaSyCKLthjejxiB_4y9a1Qfa7uMiIf7Xmmyl8'
+        apiKey: 'AIzaSyC2DzNZa39qwzvPCvcyzuVnqATnztThl7g'
     },
     govApis: {
         apiKey: 'gFORSLMWKq2Pd5AjnmlNcrPBdYJ4ipP0dN23PI8x'
@@ -275,7 +275,7 @@ async function saveLeadToSupabase(email) {
 async function generateAISummary(text) {
     try {
         // Try with gemini-1.5-flash first
-        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CONFIG.gemini.apiKey}`, {
+        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${CONFIG.gemini.apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
