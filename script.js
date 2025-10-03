@@ -5,7 +5,7 @@ const CONFIG = {
         anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXh1cXZwZ3FudXF2ZHZqZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0ODY5NzQsImV4cCI6MjA3NTA2Mjk3NH0.tHbvGQXLqRqvX8_GxUlVvZlqQGT7R7lLXPVUQR2qN9A'
     },
     gemini: {
-        apiKey: 'AIzaSyC2DzNZa39qwzvPCvcyzuVnqATnztThl7g'
+        apiKey: 'AIzaSyBPAuePrR_NvWQsEp8oxH2cneX8E7lh2AA'
     },
     govApis: {
         apiKey: 'gFORSLMWKq2Pd5AjnmlNcrPBdYJ4ipP0dN23PI8x'
