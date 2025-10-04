@@ -1,17 +1,3 @@
-// Configuration
-const CONFIG = {
-    supabase: {
-        url: 'https://qfmxuqvpgqnuqvdvjfzk.supabase.co',
-        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXh1cXZwZ3FudXF2ZHZqZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0ODY5NzQsImV4cCI6MjA3NTA2Mjk3NH0.tHbvGQXLqRqvX8_GxUlVvZlqQGT7R7lLXPVUQR2qN9A'
-    },
-    gemini: {
-        apiKey: 'AIzaSyBPAuePrR_NvWQsEp8oxH2cneX8E7lh2AA'
-    },
-    govApis: {
-        apiKey: 'gFORSLMWKq2Pd5AjnmlNcrPBdYJ4ipP0dN23PI8x'
-    }
-};
-
 // Niche keywords mapping
 const NICHE_KEYWORDS = {
     fintech: ['SEC', 'FinCEN', 'cryptocurrency', 'blockchain', 'financial technology', 'digital currency', 'payment'],
@@ -63,7 +49,7 @@ cancelEmail.addEventListener('click', () => {
 
 submitEmail.addEventListener('click', handleEmailSubmit);
 
-// Main Search Function
+// Main Search Function (Refactored to use backend proxy)
 async function performSearch(query) {
     if (!query || query.trim() === '') {
         alert('Please enter a search term');
@@ -73,82 +59,35 @@ async function performSearch(query) {
     showLoading();
     
     try {
-        // Search Federal Register and Congress.gov APIs in parallel
-        // Note: GovInfo API removed due to CORS restrictions in browser
-        const [federalRegisterResults, congressResults] = await Promise.all([
-            searchFederalRegister(query),
-            searchCongressGov(query)
-        ]);
+        const response = await fetch('/.netlify/functions/gov-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        });
 
-        // Combine and display results
-        const allResults = [
-            ...federalRegisterResults.map(r => ({ ...r, source: 'Federal Register', type: 'RULE' })),
-            ...congressResults.map(r => ({ ...r, source: 'Congress.gov', type: 'BILL' }))
-        ];
+        if (!response.ok) {
+            throw new Error(`Search failed with status: ${response.status}`);
+        }
 
-        displayResults(allResults);
+        const data = await response.json();
+        displayResults(data.results);
+
     } catch (error) {
         console.error('Search error:', error);
         alert('An error occurred while searching. Please try again.');
+        hideLoading(); // Ensure loading is hidden on error
     } finally {
+        // displayResults will hide loading, but we do it here for safety
         hideLoading();
     }
 }
-
-// Federal Register API
-async function searchFederalRegister(query) {
-    try {
-        const url = `https://www.federalregister.gov/api/v1/documents.json?conditions[term]=${encodeURIComponent(query)}&per_page=10`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        return (data.results || []).map(doc => ({
-            title: doc.title,
-            date: doc.publication_date,
-            url: doc.html_url,
-            abstract: doc.abstract || 'No abstract available',
-            fullText: doc.abstract || doc.title
-        }));
-    } catch (error) {
-        console.error('Federal Register API error:', error);
-        return [];
-    }
-}
-
-// Congress.gov API
-async function searchCongressGov(query) {
-    try {
-        const url = `https://api.congress.gov/v3/bill?api_key=${CONFIG.govApis.apiKey}&format=json&limit=10`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        // Filter results by query
-        const filtered = (data.bills || []).filter(bill => 
-            bill.title?.toLowerCase().includes(query.toLowerCase())
-        );
-        
-        return filtered.slice(0, 10).map(bill => ({
-            title: bill.title || 'Untitled Bill',
-            date: bill.updateDate || bill.introducedDate || 'N/A',
-            url: bill.url || '#',
-            abstract: `${bill.type} ${bill.number} - ${bill.title}`,
-            fullText: bill.title || ''
-        }));
-    } catch (error) {
-        console.error('Congress.gov API error:', error);
-        return [];
-    }
-}
-
-// GovInfo API removed due to CORS restrictions in browser environment
-// For production, this would require a backend proxy server
 
 // Display Results
 function displayResults(results) {
     resultsContainer.innerHTML = '';
     emptyState.classList.add('hidden');
 
-    if (results.length === 0) {
+    if (!results || results.length === 0) {
         resultsContainer.innerHTML = `
             <div class="text-center py-12">
                 <p class="text-gray-600">No results found. Try a different search term.</p>
@@ -176,7 +115,7 @@ function createResultCard(result) {
     
     card.innerHTML = `
         <div class="flex justify-between items-start mb-3">
-            <span class="px-3 py-1 ${typeColors[result.type]} text-xs font-semibold rounded-full">
+            <span class="px-3 py-1 ${typeColors[result.type] || 'bg-gray-100 text-gray-800'} text-xs font-semibold rounded-full">
                 [${result.type}] ${result.source}
             </span>
             <span class="text-sm text-gray-500">${result.date}</span>
@@ -202,14 +141,12 @@ function createResultCard(result) {
         </div>
     `;
     
-    // Add event listener for summary generation
     const generateBtn = card.querySelector('.generate-summary-btn');
     generateBtn.addEventListener('click', () => {
         currentDocumentText = result.fullText;
         currentDocumentTitle = result.title;
         emailModal.classList.remove('hidden');
         
-        // Store reference to this card for later
         generateBtn.dataset.cardId = Math.random().toString(36).substring(7);
         card.dataset.cardId = generateBtn.dataset.cardId;
     });
@@ -227,16 +164,12 @@ async function handleEmailSubmit() {
     }
     
     try {
-        // Save lead to Supabase
         await saveLeadToSupabase(email);
         
-        // Generate AI summary
         const summary = await generateAISummary(currentDocumentText);
         
-        // Display summary
         displaySummary(summary);
         
-        // Close modal
         emailModal.classList.add('hidden');
         emailInput.value = '';
     } catch (error) {
@@ -245,14 +178,17 @@ async function handleEmailSubmit() {
     }
 }
 
-// Save Lead to Supabase
+// Save Lead to Supabase (Refactored to remove CONFIG)
 async function saveLeadToSupabase(email) {
+    const supabaseUrl = 'https://qfmxuqvpgqnuqvdvjfzk.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXh1cXZwZ3FudXF2ZHZqZnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0ODY5NzQsImV4cCI6MjA3NTA2Mjk3NH0.tHbvGQXLqRqvX8_GxUlVvZlqQGT7R7lLXPVUQR2qN9A';
+
     try {
-        const response = await fetch(`${CONFIG.supabase.url}/rest/v1/leads`, {
+        const response = await fetch(`${supabaseUrl}/rest/v1/leads`, {
             method: 'POST',
             headers: {
-                'apikey': CONFIG.supabase.anonKey,
-                'Authorization': `Bearer ${CONFIG.supabase.anonKey}`,
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${supabaseAnonKey}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },
@@ -274,18 +210,13 @@ async function saveLeadToSupabase(email) {
 // Generate AI Summary with Gemini via Backend Proxy
 async function generateAISummary(text) {
     try {
-        console.log("Calling backend proxy for Gemini API...");
         const response = await fetch('/.netlify/functions/gemini-proxy', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
         });
         
-        console.log("Backend proxy response status:", response.status);
         const data = await response.json();
-        console.log("Backend proxy response data:", data);
         
         if (response.ok && data.summary) {
             return data.summary;
@@ -297,11 +228,12 @@ async function generateAISummary(text) {
         console.error('Backend proxy error:', error);
         return `AI Summary temporarily unavailable. Here's the document excerpt:\n\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
     }
-}// Display Summary
+}
+
+// Display Summary
 function displaySummary(summary) {
-    // Find all cards and show summary in the most recent one
     const cards = document.querySelectorAll('.result-card');
-    const lastCard = cards[cards.length - 1];
+    const lastCard = Array.from(cards).find(c => c.dataset.cardId);
     
     if (lastCard) {
         const summaryContainer = lastCard.querySelector('.summary-container');
@@ -311,10 +243,11 @@ function displaySummary(summary) {
         summaryText.textContent = summary;
         summaryContainer.classList.remove('hidden');
         
-        // Add PDF download functionality
         downloadBtn.addEventListener('click', () => {
             generatePDF(currentDocumentTitle, summary);
         });
+
+        delete lastCard.dataset.cardId;
     }
 }
 
@@ -323,35 +256,30 @@ function generatePDF(title, summary) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Add title
     doc.setFontSize(16);
     doc.setFont(undefined, 'bold');
     doc.text('Regulatory Summary', 20, 20);
     
-    // Add document title
     doc.setFontSize(12);
     doc.setFont(undefined, 'normal');
     const splitTitle = doc.splitTextToSize(title, 170);
     doc.text(splitTitle, 20, 35);
     
-    // Add summary
     doc.setFontSize(10);
     const splitSummary = doc.splitTextToSize(summary, 170);
     doc.text(splitSummary, 20, 50);
     
-    // Add footer
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text('Generated by InsideDCPulse | insidedcpulse.com', 20, 280);
     
-    // Save PDF
     const filename = `Regulatory_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
 }
 
 // Utility Functions
 function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const re = /^[^S@]+@[^S@]+S[^S@]+$/;
     return re.test(email);
 }
 
