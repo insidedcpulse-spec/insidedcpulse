@@ -28,7 +28,7 @@ exports.handler = async function(event, context) {
         }
 
         // Call Gemini API
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         const response = await fetch(geminiUrl, {
             method: 'POST',
