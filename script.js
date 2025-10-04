@@ -59,8 +59,7 @@ async function performSearch(query) {
     showLoading();
     
     try {
-        const response = await fetch('/.netlify/functions/gov-proxy', {
-            method: 'POST',
+                    const response = await fetch('/api/gov-proxy', {            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query })
         });
@@ -210,7 +209,7 @@ async function saveLeadToSupabase(email) {
 // Generate AI Summary with Gemini via Backend Proxy
 async function generateAISummary(text) {
     try {
-        const response = await fetch('/.netlify/functions/gemini-proxy', {
+        const response = await fetch('/api/gemini-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
