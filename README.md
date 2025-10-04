@@ -73,7 +73,7 @@ If you find InsideDCPulse valuable, please consider supporting the project: [Don
 ## Contact
 
 Need personalized regulatory monitoring or custom reports?  
-Email: contact@insidedcpulse.com
+Email: insidedcpulse@gmail.com
 
 ## License
 
