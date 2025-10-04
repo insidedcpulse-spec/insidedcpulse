@@ -158,7 +158,7 @@ function createResultCard(result) {
 async function handleEmailSubmit() {
     const email = emailInput.value.trim();
     
-    if (!email || !validateEmail(email)) {
+    if (!email) {
         alert('Please enter a valid email address');
         return;
     }
